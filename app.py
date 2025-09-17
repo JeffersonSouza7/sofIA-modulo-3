@@ -1,6 +1,6 @@
 import streamlit as st
 from utils.db import init_db
-from views import cadastro, conteudo, dashboard
+from views import cadastro, conteudo, dashboard, documentos
 
 # Inicializa banco
 init_db()
@@ -16,4 +16,4 @@ elif opcao == "Conteúdo":
 elif opcao == "Dashboard":
     dashboard.show()
 elif opcao == "Documentos":
-    pass
+    documentos.show()
