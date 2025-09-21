@@ -1,5 +1,5 @@
 import streamlit as st
-from controllers.estudante_controller import adicionar_estudante, listar_estudantes
+from controllers.estudante_controller import adicionar_estudante
 
 def show():
     st.title("📚 Cadastro de Estudantes")
@@ -15,8 +15,3 @@ def show():
         if submitted:
             adicionar_estudante(nome, idade, nota1, nota2)
             st.success("✅ Estudante cadastrado com sucesso!")
-    
-    st.subheader("Lista de Estudantes")
-    estudantes = listar_estudantes()
-    for i in estudantes:
-        st.write(f"👤 Matricula: {i.matricula} | Nome: {i.nome}| Idade: {i.idade} | 1º Nota: {i.nota1} | 2º Nota: {i.nota2} | Media: {i.media}")

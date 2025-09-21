@@ -1,7 +1,7 @@
 import streamlit as st
 import plotly.express as px
+import pandas as pd
 from controllers.estudante_controller import listar_estudantes
-
 
 def show():
     st.title("📊 Dashboard Escolar")
@@ -9,63 +9,81 @@ def show():
 
     estudantes = listar_estudantes()
 
-    # Se não tiver nenhum estudante cadastrado
     if not estudantes:
         st.warning("Nenhum estudante cadastrado.")
         return
-    
-    # Caso tenha
-    data = []
-    for i in estudantes:
-        data.append({
-            "Nome": i.nome,
-            "Nota 1": f"{i.nota1:.2f}",
-            "Nota 2": f"{i.nota2:.2f}",
-            "Média": f"{i.media:.2f}"
-        })
 
-    # Exibir tabela
+    # Criando DataFrame
+    data = pd.DataFrame([{
+        "Nome": i.nome,
+        "Nota 1": i.nota1,
+        "Nota 2": i.nota2,
+        "Média": i.media
+    } for i in estudantes])
+
+    # Exibiindo tabela
     st.subheader("Lista de Estudantes")
-    st.table(data)
+    st.table(data.style.format({"Nota 1": "{:.2f}", "Nota 2": "{:.2f}", "Média": "{:.2f}"}))
 
-     # Calculando a média geral da escola
-    soma_medias = sum(i.media for i in estudantes)
-    media_geral = soma_medias / len(estudantes)
-
+    # Média geral escolar
+    media_geral = data["Média"].mean()
     st.subheader("Média Geral da Escola")
     st.metric(label="Média Geral", value=f"{media_geral:.2f}")
 
-    # Gráfico de barras: médias por estudante
-    fig_bar = px.bar(
-        data,
-        x="Nome",
-        y="Média",
-        title="Média Individual dos Estudantes",
-        labels={"Média": "Média", "Nome": "Estudante"},
-        text="Média",
-        range_y=[0, 10]  # As notas variam de 0 a 10
-    )
-    fig_bar.update_traces(texttemplate='%{text:.2f}', textposition='outside')
-    st.plotly_chart(fig_bar, use_container_width=True)
+    # Filtros
+    st.subheader("Filtros")
+    faixa_media = st.slider("Filtrar por faixa de média:", 0.0, 10.0, (0.0, 10.0), step=0.1)
+    nomes_disponiveis = data["Nome"].unique()
+    nomes_selecionados = st.multiselect("Selecionar estudantes:", options=nomes_disponiveis, default=nomes_disponiveis)
 
-    # Categorizando estudantes por média para gráfico de pizza
+    # Aplicar filtros
+    data_filtrada = data[
+        (data["Média"] >= faixa_media[0]) &
+        (data["Média"] <= faixa_media[1]) &
+        (data["Nome"].isin(nomes_selecionados))
+    ]
+
+    # Gráfico de barras (filtrado)
+    st.subheader("Gráfico de Médias Individuais")
+    if not data_filtrada.empty:
+        fig_bar = px.bar(
+            data_filtrada,
+            x="Nome",
+            y="Média",
+            title="Média Individual dos Estudantes (Filtrada)",
+            labels={"Média": "Média", "Nome": "Estudante"},
+            text="Média",
+            range_y=[0, 10]
+        )
+        fig_bar.update_traces(texttemplate='%{text:.2f}', textposition='outside')
+        st.plotly_chart(fig_bar, use_container_width=True)
+    else:
+        st.info("Nenhum estudante corresponde aos filtros selecionados.")
+
+    # Gráfico de pizza com dados filtrados
+    st.subheader("Distribuição de Categorias de Média")
+
     categorias = {
         "Abaixo de 5": 0,
         "Entre 5 e 7": 0,
         "Acima de 7": 0
     }
-    for e in estudantes:
-        if e.media < 5:
+    for _, row in data_filtrada.iterrows():
+        media = row["Média"]
+        if media < 5:
             categorias["Abaixo de 5"] += 1
-        elif e.media <= 7:
+        elif media <= 7:
             categorias["Entre 5 e 7"] += 1
         else:
             categorias["Acima de 7"] += 1
 
-    fig_pie = px.pie(
-        names=list(categorias.keys()),
-        values=list(categorias.values()),
-        title="Distribuição das Médias dos Estudantes",
-        color_discrete_sequence=px.colors.qualitative.Pastel
-    )
-    st.plotly_chart(fig_pie, use_container_width=True)
+    if sum(categorias.values()) > 0:
+        fig_pie = px.pie(
+            names=list(categorias.keys()),
+            values=list(categorias.values()),
+            title="Distribuição das Médias dos Estudantes (Filtrada)",
+            color_discrete_sequence=px.colors.qualitative.Pastel
+        )
+        st.plotly_chart(fig_pie, use_container_width=True)
+    else:
+        st.info("Não há dados para gerar o gráfico de pizza com os filtros aplicados.")

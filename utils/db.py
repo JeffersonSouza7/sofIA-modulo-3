@@ -7,6 +7,7 @@ def init_db():
     conn = get_connection()
     cursor = conn.cursor()
     
+    
     # Estudantes
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS estudantes (
@@ -27,4 +28,21 @@ def init_db():
         )
     """)    
     conn.commit()
+
+    # Usuarios
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS usuarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password TEXT NOT NULL
+        )
+    """)
+    conn.commit()
+
+    # Cria o usuário admin padrão se ele não existir
+    cursor.execute("SELECT * FROM usuarios WHERE username = ?", ("admin",))
+    if cursor.fetchone() is None:
+        cursor.execute("INSERT INTO usuarios (username, password) VALUES (?, ?)", ("admin", "admin"))
+        conn.commit()
+
     conn.close()
